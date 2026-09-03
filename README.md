@@ -62,7 +62,6 @@ I decided to create this app to help finance students to visualize better the Gr
 - `customtkinter`: Modern user interface
 - `CTkMessagebox`: Dialog boxes
 - `blackscholes`: Black-Scholes models
-- `inspect`: Python introspection
 - `math`: Numerical calculations
 - `scipy`: Numerical calculations
 
