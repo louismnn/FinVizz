@@ -1,61 +1,25 @@
-from dash import Dash, html, dcc, Input, Output, State, callback, ctx
+from dash import Dash, html, dcc, Input, Output, State, callback, ctx, no_update
 from app.widgets import DerivativeInput
+from CTkMessagebox import CTkMessagebox
+from flask import request
 import plotly.graph_objects as go
 from app.file import File
 import numpy as np
+import json
 
 
-list_of_derivatives = (
-    'Long Call Option',
-    'Long Put Option',
-    'Short Call Option',
-    'Short Put Option',
-    'Long Straddle',
-    'Short Straddle',
-    'Long Strangle',
-    'Short Strangle',
-    'Long Butterfly',
-    'Short Butterfly',
-    'Long Iron Condor',
-    'Short Iron Condor',
-    'Short Iron Butterfly',
-    'Long Iron Butterfly',
-    'Long Binary Call',
-    'Short Binary Call',
-    'Long Binary Put',
-    'Short Binary Put',
-    'Long Bear Spread',
-    'Short Bear Spread',
-    'Long Bull Spread',
-    'Short Bull Spread',
-    'Long Calendar Call Spread',
-    'Short Calendar Call Spread',
-    'Long Calendar Put Spread',
-    'Short Calendar Put Spread',
-    'Long Asian Call',
-    'Short Asian Call',
-    'Long Asian Put',
-    'Short Asian Put'
-)
 
-my_colors = (
-    "red", 
-    "darkgreen",
-    "lightblue",
-    "yellow",
-    "orange",
-    "pink",
-    "violet",
-    "darkblue",
-    "lightgreen",
-    "grey"            
-)
+with open(r"app\assets\database.json", "r") as file:
+    datas = json.load(file)
+
+    list_of_derivatives = tuple(datas["list_of_derivatives"].keys())
+    my_colors = tuple(datas["colors"])
 
 
 class Main():
 
     def __init__(self):
-        
+
         self.file_manager = File()
 
         self.return_data = {
@@ -67,7 +31,7 @@ class Main():
         }
 
     def create_plot(self) -> go.Figure:
-        
+
         fig = go.Figure()
 
         fig.update_layout(plot_bgcolor="white", paper_bgcolor="white",
@@ -78,7 +42,7 @@ class Main():
 
         fig.update_yaxes(minor=dict(ticklen=6, tickcolor="black", showgrid=True),
                         showline=True, linewidth=1, linecolor='black', mirror=True)
-        
+
         return fig
 
     def reset(self) -> go.Figure:
@@ -114,12 +78,28 @@ class Main():
                 fig.add_trace(go.Scatter(x=x, y=el, mode="lines", line = dict(color = my_colors[i], width=3), name=dev))
                 i += 1
             else: 
-                break
+                continue
 
         return fig
 
 
 app = Dash(title="Finance Greeks Visualization")
+
+
+@app.server.after_request
+def notify_dash_request_error(response):
+    if request.path == "/_dash-update-component" and response.status_code >= 400:
+        CTkMessagebox(
+            title="Chart Update Error",
+            message=(
+                f"The server could not update the chart (HTTP {response.status_code}).\n"
+                 "Please retry."
+            ),
+            icon="cancel",
+        )
+    return response
+
+
 main = Main()
 widget = DerivativeInput()
 
@@ -181,6 +161,7 @@ app.layout = html.Div([
     State("state-store", "data")
 )
 def update_graph(tab, selected_derivative, nclicks, state):
+    dropdown_value = selected_derivative
 
     if ctx.triggered_id == "custom-button":
         fig = main.reset()
@@ -189,11 +170,15 @@ def update_graph(tab, selected_derivative, nclicks, state):
     elif ctx.triggered_id == "dropdown" and selected_derivative:
 
         inputs = widget.get_data(selected_derivative)
+        if inputs is None:
+            return no_update, state, None, tab, nclicks
+
         main.file_manager.add_element(derivative_type=selected_derivative, data=inputs)
+        dropdown_value = None
 
     state["greek"] = tab
 
     fig = go.Figure(plot)
     fig = main.graph_element(state, fig)
 
-    return fig, state, selected_derivative, tab, nclicks
+    return fig, state, dropdown_value, tab, nclicks
