@@ -1,7 +1,10 @@
 from app.check_errors import check_errors
 from CTkMessagebox import CTkMessagebox
+from decimal import Decimal, InvalidOperation
 import customtkinter as ctk
 import pandas as pd
+from typing import Optional
+import json
 
 
 ctk.set_appearance_mode("dark")
@@ -11,50 +14,18 @@ ctk.set_default_color_theme("green")
 class DerivativeInput():
 
     def __init__(self):
-        self.s = 100.0
-        self.t = 0.5
+        self.s = 100
+        self.t_a = 0.5
         self.sigma = 0.15
-        self.q = 0.0
+        self.q = 0.01
         self.r = 0.02
-        self.k1 = 90.0
-        self.k2 = 100.0
-        self.k3 = 110.0
-        self.k4 = 120.0
+        self.k1 = 90
+        self.k2 = 100
+        self.k3 = 110
+        self.k4 = 120
         self.t1 = 1.0
         self.t2 = 1.5
 
-        self.boll_table = pd.DataFrame({
-            "s": [True, True, True, True, True, True],
-            "k": [True, False, False, False, False, True],
-            "k1": [False, True, True, True, True, False], 
-            "k2": [False, True, True, True, True, False],
-            "k3": [False, False, True, True, False, False],
-            "k4": [False, False, False, True, False, False],
-            "t": [True, True, True, True, False, True],
-            "t1": [False, False, False, False, True, False],
-            "t2": [False, False, False, False, True, False],
-            "t_a": [False, False, False, False, False, True],
-            "sigma": [True, True, True, True, True, True],
-            "q": [True, True, True, True, True, True],
-            "r": [True, True, True, True, True, True]
-            })
-
-        self.translate_names = {
-            "s": "S (Underlying Price):",
-            "k": "K (Strike Price):",
-            "k1": "K1 (First Strike Price):", 
-            "k2": "K2 (Second Strike Price):",
-            "k3": "K3 (Third Strike Price):",
-            "k4": "K4 (Fourth Strike Price):",
-            "t": "T (Time to Maturity in Year):",
-            "t1": "T1 (First Time to Maturity in Year):",
-            "t2": "T2 (Second Time to Maturity in year):",
-            "t_a": "t (Average Calculation Time):",
-            "sigma": "Sigma (Annual Volatility):",
-            "q": "q (Dividend Yield):",
-            "r": "r (Risk-Free Rate):"
-            }
-            
         self.default_values = {
             "s": self.s,
             "k": self.k1,
@@ -65,44 +36,18 @@ class DerivativeInput():
             "t": self.t1,
             "t1": self.t1,
             "t2": self.t2,
-            "t_a": self.t,
+            "t_a": self.t_a,
             "sigma": self.sigma,
             "r": self.r,
             "q": self.q
             }
-        
-        self.dict_of_derivatives = {
-            'Long Call Option': 0,
-            'Long Put Option': 0,
-            'Short Call Option': 0,
-            'Short Put Option': 0,
-            'Long Straddle': 0,
-            'Short Straddle': 0,
-            'Long Binary Call': 0,
-            'Short Binary Call': 0,
-            'Long Binary Put': 0,
-            'Short Binary Put': 0,
-            'Long Strangle': 1,
-            'Short Strangle': 1,
-            'Long Bear Spread': 1,
-            'Short Bear Spread': 1,
-            'Long Bull Spread': 1,
-            'Short Bull Spread': 1,
-            'Long Butterfly': 2,
-            'Short Butterfly': 2,
-            'Short Iron Butterfly': 2,
-            'Long Iron Butterfly': 2,
-            'Long Iron Condor': 3,
-            'Short Iron Condor': 3,
-            'Long Calendar Call Spread': 4,
-            'Short Calendar Call Spread': 4,
-            'Long Calendar Put Spread': 4,
-            'Short Calendar Put Spread': 4,
-            'Long Asian Call': 5,
-            'Short Asian Call': 5,
-            'Long Asian Put': 5,
-            'Short Asian Put': 5
-            }
+
+        with open(r"app\assets\database.json", "r") as file:
+            datas = json.load(file)
+            
+            self.dict_of_derivatives = dict(datas["dict_of_derivatives"])
+            self.translate_names = dict(datas["translated_name"])
+            self.boll_table = pd.DataFrame(datas["bool_table"])
 
     def _get_type(self, derivative_type : str) -> int:
         return self.dict_of_derivatives[derivative_type]
@@ -127,10 +72,11 @@ class DerivativeInput():
 
         return {k: v for k, v in params.items()}
     
-    def _generate_widget(self, number) -> list:
+    def _generate_widget(self, number) -> Optional[list]:
 
         root = ctk.CTk()
         root.title(self.derivative_type)
+        self.values = None
 
         self.font = ctk.CTkFont(family="Helverica", size=12, weight="bold")
 
@@ -159,36 +105,49 @@ class DerivativeInput():
 
             for key, Entry in entries.items():
                 try:
-                    values[key] = float(Entry.get())
+                    values[key] = Decimal(Entry.get()) if Entry.get() not in ("NaN", "nan") else Decimal("a")
 
-                except ValueError:
+                except InvalidOperation:
                     CTkMessagebox(title="Input Error", message="Inputs must be integers or floats")
                     return
 
             try:
                 values = self._build_kwargs(values)
+                values.update({"product" : self.derivative_type})
                 check_errors(**values)
+                values.pop("product")
 
             except ValueError as e:
                 CTkMessagebox(title="Input Error : ", message=e)
                 return
 
-            self.values = values
+            self.values = dict()
+            for k,v in values.items():
+                try:
+                    self.values.update({k:float(v)})
+                except TypeError:
+                    self.values.update({k: v})
+
+            root.destroy()
+
+        def cancel():
+            self.values = None
             root.destroy()
 
         button = ctk.CTkButton(root, text="Submit", text_color="black", hover=True, fg_color= "forest green", hover_color="SpringGreen4", font=self.font, command=submit)
         button.grid(row=15, column=0, columnspan=2, pady=10)
 
+        root.protocol("WM_DELETE_WINDOW", cancel)
         root.attributes("-topmost", True)
 
         root.mainloop()
 
-        if not self.values:
-            raise Exception("User closed the window without submitting")
+        if self.values is None:
+            return None
 
         return list(self.values.values())
 
-    def get_data(self, derivative_type: str) -> list:
+    def get_data(self, derivative_type: str) -> Optional[list]:
 
         self.derivative_type = derivative_type
         num = self._get_type(derivative_type=self.derivative_type)
