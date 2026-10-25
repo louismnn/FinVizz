@@ -8,7 +8,7 @@ I decided to create this app to help finance students to visualize better the Gr
 
 ## Features
 
-- **Derivative product selection**: Dropdown with a complete list of derivatives (simple options, straddles, strangles, butterflies, iron condors, spreads, Asian options, etc.)
+- **Derivative product selection**: Dropdown with a complete list of derivatives (simple options, straddles, strangles, butterflies, iron condors, spreads, etc.)
 - **Greeks visualization**: Tabs to navigate between Delta, Gamma, Vega, Theta and Rho
 - **Adding positions**: User interface to enter parameters for each derivative (strike price, volatility, interest rate, etc.)
 - **Global portfolio**: Display of the aggregated curve of the portfolio when multiple positions are added
@@ -36,37 +36,39 @@ I decided to create this app to help finance students to visualize better the Gr
 ## Project Structure
 
 ```
-├── run.py               # Python script to run the app
-├── requirements.txt     # Requirements
-├── README.md            # README file
+├── run.py                  # Python script to run the app
+├── requirements.txt        # Requirements
+├── README.md               # README file
 └── app/
-    ├── main.py          # Main Dash application
-    ├── file.py          # Data management and Greeks calculations
-    ├── widgets.py       # User interface for parameter input
-    ├── functions.py     # Utility functions and derivative models
-    ├── check_errors.py  # User input validation
+    ├── main.py             # Main Dash application
+    ├── file.py             # Data management and Greeks calculations
+    ├── widgets.py          # User interface for parameter input
+    ├── functions.py        # Utility functions and derivative models
+    ├── check_errors.py     # User input validation
     └── assets/
-        └── header.css   # Custom CSS styles
-        ├── 00.png       # Image 1
-        ├── 01.png       # Image 2
-        ├── 02.png       # Image 3
-        └── favicon.ico  # Logo
+        └── header.css      # Custom CSS styles
+        ├── database.json   # Database
+        ├── 00.png          # Image 1
+        ├── 01.png          # Image 2
+        ├── 02.png          # Image 3
+        └── favicon.ico     # Logo
 ```
 
 ## Dependencies
 
 - `dash`: Web framework for the application
-- `plotly`: Charting library
+- `plotly`: Charting library for the application
 - `numpy`: Numerical calculations
 - `pandas`: Data manipulation
 - `customtkinter`: Modern user interface
 - `CTkMessagebox`: Dialog boxes
 - `blackscholes`: Black-Scholes models
-- `math`: Numerical calculations
 - `scipy`: Numerical calculations
+- `flask`: Web framework for the application
+- `sympy`: Numerical calculations
 
 
-The application uses the Black-Scholes model to obtain the Greeks using the [blackscholes](https://pypi.org/project/blackscholes/) library. The difficulty is that the number of derivative products is limited on this library, so I built my own formulas to calculate Asian options.
+The application uses the Black-Scholes model to obtain the Greeks using the [blackscholes](https://pypi.org/project/blackscholes/) library. The difficulty is that the number of derivative products is limited on this library, so I built my own formulas to calculate perpetual, gap and forward options.
 
 Anyone can add the derivative products they want directly in the `functions.py` file. I personally wanted to only include products that were pricable with Black-Scholes because with other methods (binomial trees, Monte-Carlo, ...) depend on the parameters you put, so the Greeks can be different.
 
@@ -87,8 +89,12 @@ The list of all the derivatives in the app are:
     'Bull Spread'
     'Calendar Call Spread'
     'Calendar Put Spread'
-    'Asian Call'
-    'Asian Put'
+    'Forward Call'
+    'Forward Put'
+    'Gap Call'
+    'Gap Put'
+    'Perpetual Call'
+    'Perpetual Put'
 
 For all of these derivatives there are two possibilities : **long** and **short**.
 
@@ -105,5 +111,7 @@ and
 ```
 python run.py
 ```
+
+WARNING: Be sure to run the script from the repository root.
 
 Then, visit http://127.0.0.1:8050/ to see the app or click on the Flask serveur that appears in your terminal.
