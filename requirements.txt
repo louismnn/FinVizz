@@ -4,5 +4,7 @@ numpy==2.5.2
 pandas==3.0.5
 customtkinter==6.0.0
 CTkMessagebox==2.7
-blackscholes==0.2.2
+blackscholes==0.2.0
 scipy==1.18.1
+sympy==1.14.0
+Flask==3.1.3
